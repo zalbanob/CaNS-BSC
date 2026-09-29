@@ -1,0 +1,25 @@
+#
+# external libraries compilation
+#
+ifeq ($(strip $(GPU)),1)
+ifneq ($(strip $(USE_DIEZDECOMP)),1)
+libs: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
+	cd $(LIBS_DIR)/2decomp-fft && make
+	cd $(LIBS_DIR)/cuDecomp && mkdir -p build && cd build && cmake .. -DCMAKE_CUDA_COMPILER=$(CUDA_HOME)/bin/nvcc -DCUDAToolkit_ROOT=$(CUDA_HOME) && make -j
+libsclean: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
+	cd $(LIBS_DIR)/2decomp-fft && make clean
+	cd $(LIBS_DIR)/cuDecomp/build && make clean; cd .. && rm -rf build
+else
+libs: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
+	cd $(LIBS_DIR)/2decomp-fft && make
+	cd $(LIBS_DIR)/diezDecomp && make -j
+libsclean: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
+	cd $(LIBS_DIR)/2decomp-fft && make clean
+	cd $(LIBS_DIR)/diezDecomp && make clean
+endif
+else
+libs: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
+	cd $(LIBS_DIR)/2decomp-fft && make
+libsclean: $(wildcard $(LIBS_DIR)/2decomp-fft/src/*.f90)
+	cd $(LIBS_DIR)/2decomp-fft && make clean
+endif

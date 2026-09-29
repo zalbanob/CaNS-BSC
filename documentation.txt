@@ -1,0 +1,85 @@
+How to use the code for your tests:
+
+
+1) COMPILATION
+
+To compile, I am loading the following modules:
+
+module purge
+module load nvidia-hpc-sdk/24.3
+module load cuda/12.3
+module load cmake
+
+
+cmake is only necessary if you want to also compile the external libraries.
+The external libraries are under the folder dependencies/. We use cuDecomp in our case.
+
+To compile:
+
+
+make allclean    -> cleans libs and source code (src/)
+make clean       -> cleans only the source code mods
+make libs        -> compile the libraries
+make             -> compile the source code
+
+if you need to see the compilation settings, you will find some flags and options in build.conf, configs/ and also under dependencies/.
+
+The executable is automatically copied in the run/ folder you precise in the Makefile.
+
+
+
+
+2) EXECUTION
+
+
+I created a small test. In the run folders, the files which are necessary for running are the followings:
+
+cans (the executable)
+data/   (folder for outputs)
+input.nml
+
+
+In the input, everything is already set up but you might need to change things in your tests:
+
+a) the resolution :
+
+this is line 2 ng(1:3) = 375, 3250, 1200
+this resolution is adapted to 1 node. When you want to scale the problem, for exemple running on two nodes, you multiply the first number (375) by the number of nodes.
+You also want to double the size of the box by the same number, e.g. you modify l(1:3) = 20., 100., 60. by multiplying the first number by the same factor (20.)
+
+b) the number of proc for the domain decomposition. 
+
+dims(1:2) = 1, 4, ipencil_axis =3     -> this line means: no decomposition in third dimension (ipencil_axis=3), 1 decompostion in x, 4 in y.
+We only decompose along y, so if you want to change the number of node you also increase the number of subdomains.
+for example, with 2 nodes it would be
+dims(1:2) = 1, 8, ipencil_axis =3
+
+c) the communication backend for cudecomp
+
+cudecomp_t_comm_backend = 4, cudecomp_is_t_enable_nccl = T, cudecomp_is_t_enable_nvshmem = T
+cudecomp_h_comm_backend = 1, cudecomp_is_h_enable_nccl = F, cudecomp_is_h_enable_nvshmem = T
+
+this is where you chose the communication backend for transpositions (_t_) and halo exchanges (_h_).
+4 means we use NCCL for transposition, 1 means we use MPI for halo exchange (NCCL was not working on halos)
+0 can be used for autotuning. It takes time if you go on a high number of node.
+
+More informations can be found in official github CaNS documentation:    https://github.com/CaNS-World/CaNS/blob/main/docs/INFO_INPUT.md
+
+d) link to the dependencies libs:
+
+in the submit.slurm file, the cudecomp libs have to be linked dynamically with the executable. This is the line
+export LD_LIBRARY_PATH=/gpfs/scratch/ehpc1022/CaNS/dependencies/cuDecomp/build/lib:${LD_LIBRARY_PATH:-}
+which has to be changed to fit your own path.
+
+
+3) OUTPUTS
+
+I turned off writing data for now since this is not what has to be tested. We could turn then on later if you want to check it but we had great performance.
+The logs from the simulation will be written in output_%j.out, where you will be able to see the time per timestep.
+
+If you need any information I forgot to mention about, you can e-mail me:   quentin.horn@univ-lille.fr
+
+
+Many thanks for your support!
+Best regards
+
