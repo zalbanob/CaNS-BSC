@@ -190,6 +190,7 @@ contains
       call check(cudaEventRecord(received(c),transpose_stream),'record received chunk')
       call check(cudaStreamWaitEvent(istream_acc_queue_1,received(c),0),'wait for received chunk')
       call transform_chunk(c,consumer)
+      if(direction == 'B' .and. c < nchunks) call MPI_Barrier(MPI_COMM_WORLD,ierr) ! fix missing barrier to avoid skew on backward
     end do
 
   contains
