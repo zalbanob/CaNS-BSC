@@ -49,7 +49,7 @@ module mod_bound
     ny2d = size(u2d_in,1)
     nz2d = size(u2d_in,2)
     if (impose_norm_bc) then
-      !$acc parallel loop collapse(2) present(u,u2d_in)
+      !$acc parallel loop collapse(2) present(u,u2d_in) async(1)
       do k = k0, k1
         do j = j0, j1
           kk = k - k0 + 1
@@ -59,7 +59,7 @@ module mod_bound
         end do
       end do
     end if
-      !$acc parallel loop collapse(2) present(v,v2d_in)
+      !$acc parallel loop collapse(2) present(v,v2d_in) async(1)
       do k = k0, k1
         do j = j0, j1
           kk = k - k0 + 1
@@ -68,7 +68,7 @@ module mod_bound
           v(ig,j,k)=-v(i0,j,k) + 2.0_rp*v2d_in(jj,kk)
         end do
       end do
-     !$acc parallel loop collapse(2) present(w,w2d_in)
+     !$acc parallel loop collapse(2) present(w,w2d_in) async(1)
       do k = k0, k1
         do j = j0, j1
           kk = k - k0 + 1
@@ -92,7 +92,7 @@ module mod_bound
     integer :: k
     real(rp) :: z, eta, cal_temp
     real(rp), parameter :: x0 = 43.3_RP
-    !$acc parallel loop default(present)
+    !$acc parallel loop default(present) async(1)
     do k=1,n
       z = zc(k)
       eta = z*sqrt(1._RP/(visc*x0))
@@ -161,12 +161,12 @@ module mod_bound
         cnt_loc(kg) = cnt_i*n(2)
       end do
       call MPI_Allreduce(cnt_loc, cnt_glob, ng3, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, ierr)
-      !$acc parallel loop present(sum_loc) default(present)
+      !$acc parallel loop present(sum_loc) default(present) async(1)
       do k = 1, ng3
         sum_loc(k) = 0._rp
       end do
       !$acc end parallel loop
-      !$acc parallel loop gang present(u, sum_loc) default(present)
+      !$acc parallel loop gang present(u, sum_loc) default(present) async(1)
       do k = 1, n(3)
         s = 0._rp
         !$acc loop vector collapse(2) reduction(+:s)
@@ -179,7 +179,8 @@ module mod_bound
         sum_loc(kg) = s
       end do
       !$acc end parallel loop
-      !$acc update self(sum_loc)
+      !$acc update self(sum_loc) async(1)
+      !$acc wait(1) ! MPI reads the reduction on the host.
       call MPI_Allreduce(MPI_IN_PLACE, sum_loc, ng3, MPI_REAL_RP, MPI_SUM, MPI_COMM_WORLD, ierr)
       do kg = 1, ng3
         if (cnt_glob(kg) > 0) then
@@ -194,10 +195,10 @@ module mod_bound
           u_adv(kg) = 0.30_rp
         end if
       end do
-      !$acc update device(u_adv)
+      !$acc update device(u_adv) async(1)
     end if
     if (is_bound(1,1)) then
-      !$acc parallel loop collapse(2) present(u,u_adv,dadvtrk) default(present) private(kg)
+      !$acc parallel loop collapse(2) present(u,u_adv,dadvtrk) default(present) private(kg) async(1)
       do k=1,n(3)
         do j=1,n(2)
           kg = lo(3) - 1 + k
@@ -205,7 +206,7 @@ module mod_bound
         end do
       end do
       !$acc end parallel loop
-      !$acc parallel loop collapse(2) present(u,dadvtrk,dadvtrko) default(present)
+      !$acc parallel loop collapse(2) present(u,dadvtrk,dadvtrko) default(present) async(1)
       do k=1,n(3)
         do j=1,n(2)
           u(n(1),  j,k) = u(n(1),  j,k) + factor1*dadvtrk(j,k) + factor2*dadvtrko(j,k)
@@ -213,7 +214,7 @@ module mod_bound
         end do
       end do
       !$acc end parallel loop
-      !$acc parallel loop collapse(2) present(dadvtrk,dadvtrko) default(present)
+      !$acc parallel loop collapse(2) present(dadvtrk,dadvtrko) default(present) async(1)
       do k=1,n(3)
         do j=1,n(2)
           dadvtrko(j,k) = dadvtrk(j,k)
