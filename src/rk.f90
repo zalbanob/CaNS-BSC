@@ -365,7 +365,7 @@ module mod_rk
               fringe_u_tilde = 0._rp
               fringe_u_tilde_tmp = 0._rp
               !$acc enter data create(fringe_u_tilde, fringe_u_tilde_tmp)
-              !$acc parallel loop gang collapse(2) default(present) present(u,fringe_u_tilde) private(j)
+              !$acc parallel loop gang collapse(2) default(present) present(u,fringe_u_tilde) private(j) async(1)
               do k = 1, n(3)
                 do i = iL_fringe, iR_fringe
                   s_ = 0._rp
@@ -386,7 +386,7 @@ module mod_rk
               fringe_is_init = .true.
             end if
             if (mod(istep,100) == 0) then
-              !$acc parallel loop gang collapse(2) default(present) present(u,fringe_u_tilde_tmp) private(j)
+              !$acc parallel loop gang collapse(2) default(present) present(u,fringe_u_tilde_tmp) private(j) async(1)
               do k = 1, n(3)
                 do i = iL_fringe, iR_fringe
                   s_ = 0._rp
@@ -398,7 +398,7 @@ module mod_rk
                 end do
               end do
               !$acc end parallel loop
-              !$acc parallel loop gang collapse(2) default(present) present(fringe_u_tilde,fringe_u_tilde_tmp)
+              !$acc parallel loop gang collapse(2) default(present) present(fringe_u_tilde,fringe_u_tilde_tmp) async(1)
               do k = 1, n(3)
                 do i = iL_fringe, iR_fringe
                   fringe_u_tilde(i,k) = 0.9_rp*fringe_u_tilde(i,k) + 0.1_rp*fringe_u_tilde_tmp(i,k)
